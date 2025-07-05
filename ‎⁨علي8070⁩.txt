@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>نظام الحضور والانصراف</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f0f2f5;
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+margin: 0;
+padding: 0;
+}
+.container {
+background: white;
+padding: 30px;
+border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+text-align: center;
+width: 90%;
+max-width: 400px;
+}
+input, button {
+padding: 10px;
+margin: 10px 0;
+width: 100%;
+font-size: 16px;
+border-radius: 5px;
+}
+button {
+background-color: #007bff;
+color: white;
+border: none;
+cursor: pointer;
+}
+button:hover {
+background-color: #0056b3;
+}
+.actions {
+display: flex;
+gap: 10px;
+}
+.actions button {
+flex: 1;
+}
+.fingerprint {
+font-size: 60px;
+cursor: pointer;
+display: none;
+margin-top: 20px;
+color: #007bff;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 15px;
+text-align: center;
+}
+th, td {
+border: 1px solid #ccc;
+padding: 8px;
+}
+th {
+background: #007bff;
+color: white;
+}
+</style>
+</head>
+<body>
+<div id="app" class="container"></div>
+
+<script>
+const ADMIN_USER = "مهدي";
+const ADMIN_PASS = "80808080";
+let currentType = "";
+let userName = localStorage.getItem("username") || "";
+let isAdmin = false;
+
+function init() {
+if (userName) {
+showUserActions();
+} else {
+showLogin();
+}
+}
+
+function showLogin() {
+document.getElementById('app').innerHTML = `
+<h2>تسجيل دخول الأدمن</h2>
+<input type="text" id="adminUser" placeholder="اسم المستخدم" />
+<input type="password" id="adminPass" placeholder="كلمة السر" />
+<button onclick="login()">تسجيل الدخول</button>
+`;
+}
+
+function login() {
+const user = document.getElementById("adminUser").value;
+const pass = document.getElementById("adminPass").value;
+if (user === ADMIN_USER && pass === ADMIN_PASS) {
+isAdmin = true;
+showAdminDashboard();
+} else {
+alert("بيانات الدخول غير صحيحة");
+}
+}
+
+function showAdminDashboard() {
+document.getElementById('app').innerHTML = `
+<h2>مرحباً، ${ADMIN_USER}</h2>
+<h3>تقرير الحضور والغياب اليومي</h3>
+<table id="dailyReport">
+<thead>
+<tr><th>الاسم</th><th>الحضور</th><th>الانصراف</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<h3>تقرير الحضور والغياب الشهري</h3>
+<table id="monthlyReport">
+<thead>
+<tr><th>الاسم</th><th>أيام الحضور</th><th>أيام الانصراف</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<button onclick="logout()">تسجيل الخروج</button>
+`;
+loadReports();
+}
+
+function logout() {
+isAdmin = false;
+userName = "";
+localStorage.removeItem("username");
+init();
+}
+
+function loadReports() {
+const records = JSON.parse(localStorage.getItem('attendanceRecords') || '{}');
+const today = new Date().toISOString().slice(0,10);
+const dailyBody = document.querySelector("#dailyReport tbody");
+const monthlyBody = document.querySelector("#monthlyReport tbody");
+
+dailyBody.innerHTML = "";
+monthlyBody.innerHTML = "";
+
+let allNamesSet = new Set();
+for (const day in records) {
+for (const name in records[day]) {
+allNamesSet.add(name);
+}
+}
+const allNames = Array.from(allNamesSet);
+
+allNames.forEach(name => {
+const statusToday = records[today] && records[today][name] ? records[today][name] : "❌";
+dailyBody.innerHTML += `
+<tr>
+<td>${name}</td>
+<td>${statusToday === 'حضور' ? '✅' : '❌'}</td>
+<td>${statusToday === 'انصراف' ? '✅' : '❌'}</td>
+</tr>
+`;
+});
+
+const month = new Date().toISOString().slice(0,7);
+allNames.forEach(name => {
+let attendanceCount = 0;
+let leaveCount = 0;
+for (const day in records) {
+if (day.startsWith(month)) {
+if (records[day][name] === "حضور") attendanceCount++;
+if (records[day][name] === "انصراف") leaveCount++;
+}
+}
+monthlyBody.innerHTML += `
+<tr>
+<td>${name}</td>
+<td>${attendanceCount}</td>
+<td>${leaveCount}</td>
+</tr>
+`;
+});
+}
+
+function showUserActions() {
+document.getElementById('app').innerHTML = `
+<h2>مرحباً، ${userName}</h2>
+<div class="actions">
+<button onclick="selectType('حضور')">حضور</button>
+<button onclick="selectType('انصراف')">انصراف</button>
+</div>
+<div id="fingerprint" class="fingerprint" onclick="submit()" title="اضغط لتسجيل البصمة">🔒</div>
+${isAdmin ? `<button onclick="logout()">تسجيل الخروج</button>` : ''}
+`;
+}
+
+function selectType(type) {
+currentType = type;
+document.getElementById("fingerprint").style.display = 'block';
+}
+
+function submit() {
+if (!currentType) {
+alert("اختر حضور أو انصراف أولاً");
+return;
+}
+
+const today = new Date().toISOString().slice(0,10);
+let records = JSON.parse(localStorage.getItem('attendanceRecords') || '{}');
+
+if (!records[today]) records[today] = {};
+
+if (records[today][userName] && records[today][userName] === currentType) {
+alert(`لقد قمت بتسجيل ${currentType} لهذا اليوم مسبقاً.`);
+return;
+}
+
+records[today][userName] = currentType;
+localStorage.setItem('attendanceRecords', JSON.stringify(records));
+alert(`${currentType} تم تسجيل ${userName} بنجاح`);
+document.getElementById("fingerprint").style.display = 'none';
+currentType = "";
+if (!isAdmin) {
+showUserActions();
+}
+}
+
+init();
+</script>
+</body>
+</html>
