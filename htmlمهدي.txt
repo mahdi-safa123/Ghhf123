@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>تسجيل حضور وانصراف</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+direction: rtl;
+padding: 20px;
+background: #f0f0f0;
+text-align: center;
+}
+#nameInput, #attendanceType {
+margin-top: 20px;
+display: none;
+}
+#fingerprintBtn {
+font-size: 40px;
+cursor: pointer;
+color: #007BFF;
+border: none;
+background: transparent;
+margin-top: 20px;
+display: none;
+}
+#log {
+margin-top: 30px;
+background: #fff;
+padding: 15px;
+border-radius: 8px;
+max-height: 250px;
+overflow-y: auto;
+text-align: right;
+}
+.success {
+color: green;
+margin-top: 10px;
+font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h2>تسجيل حضور وانصراف الموظفين</h2>
+
+<div id="inputArea">
+<input type="text" id="nameInput" placeholder="اكتب اسمك هنا" />
+</div>
+
+<div id="attendanceType">
+<label>
+<input type="radio" name="type" value="حضور" checked />
+حضور
+</label>
+<label style="margin-left:20px;">
+<input type="radio" name="type" value="انصراف" />
+انصراف
+</label>
+</div>
+
+<button id="fingerprintBtn" title="اضغط للبصمة">🖐️</button>
+
+<div id="message" class="success"></div>
+
+<div id="log">
+<h3>سجل الحضور السابق</h3>
+<ul id="attendanceList"></ul>
+</div>
+
+<script>
+const nameInput = document.getElementById("nameInput");
+const attendanceType = document.getElementById("attendanceType");
+const fingerprintBtn = document.getElementById("fingerprintBtn");
+const message = document.getElementById("message");
+const attendanceList = document.getElementById("attendanceList");
+
+function loadAttendance() {
+attendanceList.innerHTML = "";
+const data = JSON.parse(localStorage.getItem("attendanceData") || "[]");
+if (data.length === 0) {
+attendanceList.innerHTML = "<li>لا توجد تسجيلات سابقة</li>";
+return;
+}
+data.forEach(item => {
+const li = document.createElement("li");
+li.textContent = `${item.name} - ${item.type} - ${item.date} ${item.time}`;
+attendanceList.appendChild(li);
+});
+}
+
+function registerAttendance(name, type) {
+const now = new Date();
+const date = now.toLocaleDateString("ar-EG");
+const time = now.toLocaleTimeString("ar-EG");
+
+const data = JSON.parse(localStorage.getItem("attendanceData") || "[]");
+data.push({ name, type, date, time });
+localStorage.setItem("attendanceData", JSON.stringify(data));
+
+message.textContent = `تم تسجيل ${type} لـ ${name} بتاريخ ${date} الساعة ${time}`;
+loadAttendance();
+}
+
+let storedName = localStorage.getItem("employeeName");
+
+if (storedName) {
+nameInput.style.display = "none";
+attendanceType.style.display = "block";
+fingerprintBtn.style.display = "inline-block";
+} else {
+nameInput.style.display = "inline-block";
+attendanceType.style.display = "none";
+fingerprintBtn.style.display = "none";
+}
+
+nameInput.addEventListener("keydown", (e) => {
+if (e.key === "Enter") {
+const val = nameInput.value.trim();
+if (val === "") {
+alert("رجاءً اكتب اسمك");
+return;
+}
+localStorage.setItem("employeeName", val);
+storedName = val;
+nameInput.style.display = "none";
+attendanceType.style.display = "block";
+fingerprintBtn.style.display = "inline-block";
+message.textContent = `مرحباً ${val}، يمكنك الآن اختيار حضور أو انصراف والبصم`;
+}
+});
+
+fingerprintBtn.addEventListener("click", () => {
+if (!storedName) {
+alert("لم يتم تسجيل الاسم، رجاءً اكتب اسمك أولاً");
+nameInput.style.display = "inline-block";
+attendanceType.style.display = "none";
+fingerprintBtn.style.display = "none";
+return;
+}
+const selectedType = document.querySelector('input[name="type"]:checked').value;
+registerAttendance(storedName, selectedType);
+});
+
+loadAttendance();
+</script>
+
+</body>
+</html>
+
