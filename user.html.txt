@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<title>نظام الحضور والانصراف</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f0f2f5;
+display: flex; justify-content: center; align-items: center; height: 100vh;
+margin: 0; padding: 0;
+}
+.container {
+background: white; padding: 30px; border-radius: 10px;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px;
+}
+input, button {
+padding: 10px; margin: 10px 0; width: 100%; font-size: 16px; border-radius: 5px;
+}
+button {
+background-color: #007bff; color: white; border: none; cursor: pointer;
+}
+button:hover { background-color: #0056b3; }
+.actions { display: flex; gap: 10px; }
+.actions button { flex: 1; }
+.fingerprint { font-size: 60px; cursor: pointer; display: none; margin-top: 20px; color: #007bff; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+const app = document.getElementById('app');
+let currentType = "";
+let userName = localStorage.getItem("username") || "";
+
+function init() {
+if (!userName) {
+app.innerHTML = `
+<h2>ادخل اسمك:</h2>
+<input type="text" id="nameInput" placeholder="اسمك">
+<button onclick="saveName()">حفظ</button>
+`;
+} else {
+showActions();
+}
+}
+
+function saveName() {
+const input = document.getElementById("nameInput");
+const name = input.value.trim();
+if (name) {
+userName = name;
+localStorage.setItem("username", name);
+showActions();
+}
+}
+
+function showActions() {
+app.innerHTML = `
+<h2>مرحباً، ${userName}</h2>
+<div class="actions">
+<button onclick="selectType('حضور')">حضور</button>
+<button onclick="selectType('انصراف')">انصراف</button>
+</div>
+<div id="fingerprint" class="fingerprint" onclick="submit()" title="اضغط لتسجيل البصمة">🔒</div>
+`;
+}
+
+function selectType(type) {
+currentType = type;
+document.getElementById("fingerprint").style.display = 'block';
+}
+
+function submit() {
+if (!currentType) {
+alert("اختر حضور أو انصراف أولاً");
+return;
+}
+
+const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+// جلب السجلات الحالية من localStorage
+let records = JSON.parse(localStorage.getItem('attendanceRecords') || '{}');
+
+if (!records[today]) records[today] = {};
+
+// تحقق إذا تم تسجيل نفس النوع اليوم من قبل
+if (records[today][userName] && records[today][userName] === currentType) {
+alert(`لقد قمت بتسجيل ${currentType} لهذا اليوم مسبقاً.`);
+return;
+}
+
+records[today][userName] = currentType;
+localStorage.setItem('attendanceRecords', JSON.stringify(records));
+alert(`${currentType} تم تسجيل ${userName} بنجاح`);
+document.getElementById("fingerprint").style.display = 'none';
+currentType = "";
+}
+
+init();
+</script>
+</body>
+</html>

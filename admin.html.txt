@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8" />
+<title>لوحة تحكم الأدمن</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f4f4f4;
+padding: 20px;
+}
+.login, .dashboard {
+background: white;
+padding: 20px;
+border-radius: 10px;
+max-width: 600px;
+margin: auto;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+input, button {
+padding: 10px;
+width: 100%;
+margin: 10px 0;
+font-size: 16px;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 15px;
+text-align: center;
+}
+th, td {
+border: 1px solid #ccc;
+padding: 8px;
+}
+th {
+background: #007bff;
+color: white;
+}
+</style>
+</head>
+<body>
+<div class="login" id="loginBox">
+<h2>تسجيل دخول الأدمن</h2>
+<input type="text" id="adminUser" placeholder="اسم المستخدم" />
+<input type="password" id="adminPass" placeholder="كلمة السر" />
+<button onclick="login()">تسجيل الدخول</button>
+</div>
+
+<div class="dashboard" id="dashboard" style="display:none;">
+<h2>مرحباً مهدي</h2>
+<h3>تقرير الحضور والغياب اليومي</h3>
+<table id="dailyReport">
+<thead>
+<tr><th>الاسم</th><th>الحضور</th><th>الانصراف</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+<h3>تقرير الحضور والغياب الشهري</h3>
+<table id="monthlyReport">
+<thead>
+<tr><th>الاسم</th><th>أيام الحضور</th><th>أيام الانصراف</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+const ADMIN_USER = "مهدي";
+const ADMIN_PASS = "80808080";
+
+function login() {
+const user = document.getElementById("adminUser").value;
+const pass = document.getElementById("adminPass").value;
+if (user === ADMIN_USER && pass === ADMIN_PASS) {
+document.getElementById("loginBox").style.display = "none";
+document.getElementById("dashboard").style.display = "block";
+loadReports();
+} else {
+alert("بيانات الدخول غير صحيحة");
+}
+}
+
+function loadReports() {
+const records = JSON.parse(localStorage.getItem('attendanceRecords') || '{}');
+const today = new Date().toISOString().slice(0,10);
+const dailyBody = document.querySelector("#dailyReport tbody");
+const monthlyBody = document.querySelector("#monthlyReport tbody");
+
+dailyBody.innerHTML = "";
+monthlyBody.innerHTML = "";
+
+// جمع أسماء كل الموظفين عبر كل الأيام
+let allNamesSet = new Set();
+for (const day in records) {
+for (const name in records[day]) {
+allNamesSet.add(name);
+}
+}
+const allNames = Array.from(allNamesSet);
+
+// تقرير يومي: حضور وانصراف اليوم فقط
+allNames.forEach(name => {
+const statusToday = records[today] && records[today][name] ? records[today][name] : "❌";
+// الحضور = حضور، الانصراف = انصراف أو غير موجود
+dailyBody.innerHTML += `
+<tr>
+<td>${name}</td>
+<td>${statusToday === 'حضور' ? '✅' : '❌'}</td>
+<td>${statusToday === 'انصراف' ? '✅' : '❌'}</td>
+</tr>
+`;
+});
+
+// تقرير شهري: عدد أيام حضور وانصراف لكل موظف (الشهر الحالي)
+const month = new Date().toISOString().slice(0,7); // YYYY-MM
+allNames.forEach(name => {
+let attendanceCount = 0;
+let leaveCount = 0;
+for (const day in records) {
+if (day.startsWith(month)) {
+if (records[day][name] === "حضور") attendanceCount++;
+if (records[day][name] === "انصراف") leaveCount++;
+}
+}
+monthlyBody.innerHTML += `
+<tr>
+<td>${name}</td>
+<td>${attendanceCount}</td>
+<td>${leaveCount}</td>
+</tr>
+`;
+});
+}
+</script>
+</body>
+</html>
