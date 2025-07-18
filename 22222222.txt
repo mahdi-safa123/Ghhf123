@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>محول الدولار إلى الدينار مع قاصة وسجل تدقيق</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    .title {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      font-size: 18px;
+      box-sizing: border-box;
+    }
+    .balance-box {
+      background: #fff;
+      padding: 20px;
+      border: 2px solid #007bff;
+      border-radius: 10px;
+      font-size: 30px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px 0;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .log-link {
+      display: block;
+      text-align: center;
+      margin-top: 15px;
+      color: blue;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title">نظام تحويل الدولار + قاصة + سجل تدقيق</div>
+
+  <div class="input-group">
+    <label>البريد الإلكتروني</label>
+    <input type="email" id="email" placeholder="example@email.com" />
+  </div>
+
+  <div class="input-group">
+    <label>المبلغ بالدولار</label>
+    <input type="number" id="usd" placeholder="أدخل الدولار" />
+  </div>
+
+  <div class="input-group">
+    <label>المبلغ بالدينار</label>
+    <input type="text" id="iqd" readonly />
+  </div>
+
+  <button onclick="convert()">تحويل</button>
+  <button onclick="addToSafe()">إضافة إلى القاصة</button>
+  <button onclick="withdrawFromSafe()">تصدير من القاصة</button>
+
+  <div class="balance-box" id="safe">0 دينار</div>
+
+  <span class="log-link" onclick="openAuditLog()">📜 عرض سجل التدقيق</span>
+
+  <!-- سجل التدقيق في نافذة جديدة -->
+  <script>
+    const usdInput = document.getElementById("usd");
+    const iqdInput = document.getElementById("iqd");
+    const safeDisplay = document.getElementById("safe");
+
+    function convert() {
+      const usd = parseFloat(usdInput.value);
+      const rate = 1320;
+      const iqd = usd * rate;
+      iqdInput.value = formatNumber(iqd) + " دينار";
+    }
+
+    function formatNumber(n) {
+      return Number(n).toLocaleString('en-US');
+    }
+
+    function getSafe() {
+      return parseFloat(localStorage.getItem("safe") || "0");
+    }
+
+    function setSafe(value) {
+      localStorage.setItem("safe", value);
+      safeDisplay.textContent = formatNumber(value) + " دينار";
+    }
+
+    function getLog() {
+      return JSON.parse(localStorage.getItem("log") || "[]");
+    }
+
+    function addLog(entry) {
+      const log = getLog();
+      const email = document.getElementById("email").value || "بدون بريد";
+      const now = new Date().toLocaleString();
+      log.unshift(`[${now}] (${email}) - ${entry}`);
+      localStorage.setItem("log", JSON.stringify(log));
+    }
+
+    function addToSafe() {
+      const amount = getIQD();
+      const current = getSafe();
+      const updated = current + amount;
+      setSafe(updated);
+      addLog(`إضافة ${formatNumber(amount)} دينار إلى القاصة`);
+    }
+
+    function withdrawFromSafe() {
+      const amount = getIQD();
+      const current = getSafe();
+      const updated = current - amount;
+      setSafe(updated);
+      addLog(`سحب ${formatNumber(amount)} دينار من القاصة`);
+    }
+
+    function getIQD() {
+      const val = iqdInput.value.replace(/[^\d]/g, "");
+      return parseFloat(val) || 0;
+    }
+
+    function openAuditLog() {
+      const log = getLog().join("<br><hr>");
+      const newWin = window.open("", "_blank", "width=600,height=400");
+      newWin.document.write(`
+        <html dir="rtl"><head><title>سجل التدقيق</title></head><body>
+        <h2>سجل التدقيق:</h2>
+        <div style="font-size:18px">${log}</div>
+        </body></html>
+      `);
+    }
+
+    // عند التشغيل: تحميل القاصة
+    window.onload = () => {
+      setSafe(getSafe());
+    };
+  </script>
+
+</body>
+</html>
